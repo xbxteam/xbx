@@ -6,23 +6,22 @@
 
 
 
+#include <string.h>
+#include <stdalign.h>
 
 #include "XBD_BL.h"
-#include <XBD_HAL.h>
-#include <XBD_commands.h>
-
-#include <XBD_debug.h>
-#include <string.h>
-#include <XBD_crc.h>
-#include <XBD_util.h>
-#include <XBD_version.h>
+#include "XBD_HAL.h"
+#include "XBD_commands.h"
+#include "XBD_crc.h"
+#include "XBD_debug.h"
+#include "XBD_util.h"
+#include "XBD_version.h"
 
 const char XBD_Rev[] CONSTDATAAREA = XBX_REVISION;
 
 #define XBD_ANSWER_MAXLEN (XBD_COMMAND_LEN+REVNSIZE+CRC16SIZE)
 //#define XBD_ANSWER_MAXLEN 254	//for I2C maximum data length comm tests
-uint32_t XBD_alignedResponse[256/sizeof(uint32_t)];
-uint8_t *XBD_response = (uint8_t*)XBD_alignedResponse;
+uint8_t alignas(sizeof(uint32_t)) XBD_response[256];
 
 typedef enum enum_XBD_State{
 	idle = 0, flash
@@ -57,17 +56,17 @@ void XBD_BL_DisregardBlock(uint8_t len, uint8_t *data) {
 	XBD_loadStringFromConstDataArea((char *)XBD_response, XBDcrc);
 	realTXlen=XBD_COMMAND_LEN+CRC16SIZE;
 
-	XBD_debugOut((char *)XBD_response);
-	XBD_debugOut(" :");
+	XBD_DEBUG((char *)XBD_response);
+	XBD_DEBUG(" :");
 	for (ctr = 0; ctr < len - CRC16SIZE; ++ctr) {
 		if (0 == ctr % 16)
-			XBD_debugOut("\n");
-		XBD_debugOutHexByte(data[ctr]);
+			XBD_DEBUG("\n");
+		XBD_DEBUG_BYTE(data[ctr]);
 	}
-	XBD_debugOut("\n");
-	XBD_debugOutHexByte(crc >> 8), XBD_debugOutHexByte(crc & 0xff), XBD_debugOutChar('_');
-	XBD_debugOutHexByte(rx_crc >> 8), XBD_debugOutHexByte(rx_crc & 0xff);
-	XBD_debugOut("\n---------------------\n");
+	XBD_DEBUG("\n");
+	XBD_DEBUG_BYTE(crc >> 8); XBD_DEBUG_BYTE(crc & 0xff); XBD_DEBUG_CHAR('_');
+	XBD_DEBUG_BYTE(rx_crc >> 8); XBD_DEBUG_BYTE(rx_crc & 0xff);
+	XBD_DEBUG("\n---------------------\n");
 	return;
 }
 
@@ -93,9 +92,9 @@ void XBD_BL_HandleProgramFlashRequest(uint8_t len, uint8_t *data) {
 			//&& ((sw_flashaddr & PAGE_ALIGN_MASK) == sw_flashaddr) //page aligned
 	) {
 		//put flash programming call here
-//		XBD_debugOut("Rec'd correct request to flash:");
-//		XBD_debugOut("\nADDR="), XBD_debugOutHex32Bit(sw_flashaddr);
-//		XBD_debugOut("\nLENG="), XBD_debugOutHex32Bit(sw_flashleng);
+//		XBD_DEBUG("Rec'd correct request to flash:");
+//		XBD_DEBUG("\nADDR="), XBD_DEBUG_32B(sw_flashaddr);
+//		XBD_DEBUG("\nLENG="), XBD_DEBUG_32B(sw_flashleng);
 
 		XBD_readPage((sw_flashaddr & PAGE_ALIGN_MASK), sw_flashbuffer);
 		sw_flash_fbidx = (sw_flashaddr & ~PAGE_ALIGN_MASK);
@@ -107,16 +106,16 @@ void XBD_BL_HandleProgramFlashRequest(uint8_t len, uint8_t *data) {
 		//prepare 'OK' response to XBH
 		XBD_loadStringFromConstDataArea((char *)buf, XBDpfo);
 	} else {
-		XBD_debugOut("Rec'd W-R-O-N-G request to flash:");
-		XBD_debugOut("\nADDR="), XBD_debugOutHex32Bit(sw_flashaddr);
-		XBD_debugOut("\nLENG="), XBD_debugOutHex32Bit(sw_flashleng);
+		XBD_DEBUG("Rec'd W-R-O-N-G request to flash:");
+		XBD_DEBUG("\nADDR="); XBD_DEBUG_32B(sw_flashaddr);
+		XBD_DEBUG("\nLENG="); XBD_DEBUG_32B(sw_flashleng);
 		//prepare 'FAIL' response to XBH
 		XBD_loadStringFromConstDataArea((char *)buf, XBDpff);
 	}
 
-//	XBD_debugOut("\n");
-//	XBD_debugOut((char *)buf);
-//	XBD_debugOut("\n");
+//	XBD_DEBUG("\n");
+//	XBD_DEBUG((char *)buf);
+//	XBD_DEBUG("\n");
 	strcpy((char *)XBD_response, (char *)buf);
 	realTXlen=XBD_COMMAND_LEN+CRC16SIZE;
 	return;
@@ -126,10 +125,10 @@ void XBD_BL_HandleFlashDownloadRequest(uint8_t len, uint8_t *data) {
 	if ((sw_flashseqn == NTOHL(*((uint32_t*) (data + XBD_COMMAND_LEN)))) && //sequence number correct
 			(xbd_state == flash)) {
 		//put flash programming call here
-//		XBD_debugOut("Rec'd correct flash download:");
-//		XBD_debugOut("\nSEQN="), XBD_debugOutHex32Bit(sw_flashseqn);
-//		XBD_debugOut("\nADDR="), XBD_debugOutHex32Bit(sw_flashaddr);
-//		XBD_debugOut("\nLENG="), XBD_debugOutHex32Bit(sw_flashleng);
+//		XBD_DEBUG("Rec'd correct flash download:");
+//		XBD_DEBUG("\nSEQN="), XBD_DEBUG_32B(sw_flashseqn);
+//		XBD_DEBUG("\nADDR="), XBD_DEBUG_32B(sw_flashaddr);
+//		XBD_DEBUG("\nLENG="), XBD_DEBUG_32B(sw_flashleng);
 
 		if (PAGESIZE >= (sw_flash_fbidx + len - XBD_COMMAND_LEN - SEQNSIZE)) {
 			uint8_t *p_src = (void*) (data+XBD_COMMAND_LEN + SEQNSIZE);
@@ -153,24 +152,24 @@ void XBD_BL_HandleFlashDownloadRequest(uint8_t len, uint8_t *data) {
 			XBD_loadStringFromConstDataArea((char *)buf, XBDpfo);
 		} else {
 			// TODO: downloads von >1 page unterstuetzen
-			XBD_debugOut("\nDownload > 1 Page not yet supported.");
+			XBD_DEBUG("\nDownload > 1 Page not yet supported.");
 			xbd_state = idle;
 			XBD_loadStringFromConstDataArea((char *)buf, XBDpff);
 		}
 
 	} else {
-		XBD_debugOut("Rec'd W-R-O-N-G flash download:");
-		XBD_debugOut("\nADDR="), XBD_debugOutHex32Bit(sw_flashaddr);
-		XBD_debugOut("\nLENG="), XBD_debugOutHex32Bit(sw_flashleng);
-		XBD_debugOut("\nEXPECTED SQ="), XBD_debugOutHex32Bit(sw_flashseqn);
-		XBD_debugOut("\nRec'd SQ="), XBD_debugOutHex32Bit(NTOHL(*((uint32_t*) (data + XBD_COMMAND_LEN))));
+		XBD_DEBUG("Rec'd W-R-O-N-G flash download:");
+		XBD_DEBUG("\nADDR="); XBD_DEBUG_32B(sw_flashaddr);
+		XBD_DEBUG("\nLENG="); XBD_DEBUG_32B(sw_flashleng);
+		XBD_DEBUG("\nEXPECTED SQ="); XBD_DEBUG_32B(sw_flashseqn);
+		XBD_DEBUG("\nRec'd SQ="); XBD_DEBUG_32B(NTOHL(*((uint32_t*) (data + XBD_COMMAND_LEN))));
                 //prepare 'FAIL' response to XBH
 		XBD_loadStringFromConstDataArea((char *)buf, XBDpff);
 	}
 
-//	XBD_debugOut("\n");
-//	XBD_debugOut((char *)buf);
-//	XBD_debugOut("\n");
+//	XBD_DEBUG("\n");
+//	XBD_DEBUG((char *)buf);
+//	XBD_DEBUG("\n");
 	strcpy((char *)XBD_response, (char *)buf);
 	realTXlen=XBD_COMMAND_LEN+CRC16SIZE;
 	return;
@@ -187,25 +186,27 @@ void XBD_BL_HandleVersionInformationRequest(){
 
 void XBD_BL_HandleTimingCalibrationRequest(){
 	uint32_t cycles_elapsed = XBD_busyLoopWithTiming(DEVICE_SPECIFIC_SANE_TC_VALUE);
+	uint32_t cycles_elapsed_n = HTONL(cycles_elapsed);
 
-	XBD_loadStringFromConstDataArea((char *)XBD_response, XBDtco);
-	*(uint32_t *)&XBD_response[XBD_COMMAND_LEN]=HTONL(cycles_elapsed);
-		realTXlen=XBD_COMMAND_LEN+TIMESIZE+CRC16SIZE;
+    XBD_loadStringFromConstDataArea((char *)XBD_response, XBDtco);
+    memcpy(XBD_response+XBD_COMMAND_LEN,&cycles_elapsed_n, sizeof(cycles_elapsed_n));
+    realTXlen=XBD_COMMAND_LEN+TIMESIZE+CRC16SIZE;
 }
 
 void XBD_BL_HandleTargetRevisionRequest(){
 	uint8_t i;
-	uint8_t svnRevLen = strlen(XBD_Rev);
+	uint8_t revLen = strlen(XBD_Rev);
+
+    revLen = (revLen > REVNSIZE) ? REVNSIZE: revLen;
 
 	XBD_loadStringFromConstDataArea((char *)XBD_response, XBDtro);
 	
-	// Report SVN Rev in 5 digits length
-	for(i=0;i<5-svnRevLen;++i)
+	for(i=0;i<REVNSIZE-revLen;++i)
 	{
 		XBD_response[XBD_COMMAND_LEN+i]='0';
 	}
 	XBD_loadStringFromConstDataArea((char *)&XBD_response[XBD_COMMAND_LEN+i], XBD_Rev);
-	realTXlen=XBD_COMMAND_LEN+5+CRC16SIZE;
+	realTXlen=XBD_COMMAND_LEN+REVNSIZE+CRC16SIZE;
 }
 
 void FRW_msgRecHand(uint8_t len, uint8_t* data) {
@@ -213,10 +214,10 @@ void FRW_msgRecHand(uint8_t len, uint8_t* data) {
 	uint8_t dataLen=len-CRC16SIZE;
 	//output length of received block
 	#ifdef XBX_DEBUG_BL
-	XBD_debugOut("Rec'd len=");
-	XBD_debugOutHexByte(len);
-	XBD_debugOutChar('.');
-	XBD_debugOut("\n");
+	XBD_DEBUG("Rec'd len=");
+	XBD_DEBUG_BYTE(len);
+	XBD_DEBUG_CHAR('.');
+	XBD_DEBUG("\n");
 	#endif
 
 	//check crc and disregard block if wrong
@@ -295,32 +296,37 @@ void FRW_msgRecHand(uint8_t len, uint8_t* data) {
 
 	//no known command recognized
 	XBD_loadStringFromConstDataArea((char *)XBD_response, XBDunk);
+    realTXlen = strlen(XBDunk);
 	#ifdef XBX_DEBUG_BL
-	XBD_debugOut((char *)XBD_response);
-	XBD_debugOut("\n");
+	XBD_DEBUG((char *)XBD_response);
+	XBD_DEBUG("\n");
 	#endif
 }
 
 uint8_t FRW_msgTraHand(uint8_t maxlen, uint8_t* data) {
+    size_t txLen;
  	if(maxlen <= CRC16SIZE) {
-        	XBD_debugOut("MsgTraHand: Maxlen too small: ");
-        	XBD_debugOutHexByte(maxlen);
-                XBD_debugOut("\n");
+        	XBD_DEBUG("MsgTraHand: Maxlen too small: ");
+        	XBD_DEBUG_BYTE(maxlen);
+                XBD_DEBUG("\n");
 	}
                                         
 	if (maxlen > XBD_ANSWER_MAXLEN)
 	{
-		//XBD_debugOut("MsgTraHand: Maxlen too large: ");
-		//XBD_debugOutHexByte(maxlen);
-    //XBD_debugOut("\n");
+		//XBD_DEBUG("MsgTraHand: Maxlen too large: ");
+		//XBD_DEBUG_BYTE(maxlen);
+    //XBD_DEBUG("\n");
 		maxlen = XBD_ANSWER_MAXLEN;
 	}
 
-	memcpy((char*) data, (char *)XBD_response, maxlen-CRC16SIZE);
-	crc = crc16buffer(data, realTXlen-CRC16SIZE);                
-	uint8_t *target=data+realTXlen-CRC16SIZE;             
+    // Truncate transmission if greater than maxlen
+    txLen = (realTXlen > maxlen) ? maxlen: realTXlen;
+
+	memcpy((char*) data, (char *)XBD_response, txLen-CRC16SIZE);
+	crc = crc16buffer(data, txLen-CRC16SIZE);                
+	uint8_t *target=data+txLen-CRC16SIZE;             
 	PACK_CRC(crc,target);
-	//XBD_debugOutBuffer("FRW_msgTraHand", data, maxlen);
+	//XBD_DEBUG_BUF("FRW_msgTraHand", data, maxlen);
 	return maxlen;
 }
 
@@ -330,7 +336,7 @@ int main(void)
 
 	XBD_init();
 
-	XBD_debugOut("XBD BL "XBX_REVISION" started\r\n");
+	XBD_DEBUG("XBD BL "XBX_REVISION" started\r\n");
 
 	while(1)
 	{

@@ -3,6 +3,7 @@
 *.ko
 *.obj
 *.elf
+*.axf
 
 # Precompiled Headers
 *.gch
@@ -27,3 +28,25 @@
 *.i*86
 *.x86_64
 *.hex
+*.bin
+__pycache__
+
+# Compile artifacts
+*.map
+*.d
+*.lss
+*.eep
+*.x
+
+# Vim swap files
+.*sw*
+
+# Benchmark artifacts
+/bench
+/work
+/binaries
+/algobase
+
+# Backups
+*.old
+*.orig

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+#maxSize=$1
+maxSize=39936 # 0xe000-0x4400
+if [ -z "$maxSize" ]
+then
+  exit -1
+fi
+
+if [ -e xbdprog.bin ]
+then
+  totalsize=`msp430-elf-size xbdprog.bin | tail -n 1 | awk '{print $4}'`
+  if [ $totalsize -ge $maxSize ]
+  then
+    echo "Postlink: Binary too large ($totalsize bytes)" >&2
+    rm xbdprog.bin
+    exit -1
+  fi
+fi
+
+if [ -e xbdprog.bin ]
+then
+  #HEX_FLASH_FLAGS="--debugging -R .eeprom -R .fuse -R .lock -R .signature"
+  HEX_FLASH_FLAGS="-R .eeprom -R .fuse -R .lock -R .signature"
+  msp430-elf-objcopy -O ihex ${HEX_FLASH_FLAGS}  xbdprog.bin xbdprog.hex
+else
+  echo "Postlink: Objcopy failed" >&2
+  exit -1
+fi
+

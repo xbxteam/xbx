@@ -95,7 +95,10 @@ uint32_t XBD_genInitialMultiPacket(const uint8_t* srcdata, uint32_t srclen, uint
 	//XBD_debugOutBuffer("srclen:",&srclen, 4);
 	//XBD_debugOutBuffer("srclen@target:",dstbuf+offset, 4);
 	offset+=LENGSIZE;
-	XBD_debugOut("\noffset="), XBD_debugOutHex32Bit(offset);
+#ifdef DEBUG
+	XBD_DEBUG("\noffset="); XBD_DEBUG_32B(offset);
+    XBD_DEBUG("\n");
+#endif
 	realTXlen=XBD_ANSWERLENG_MAX;
 	return offset;
 }

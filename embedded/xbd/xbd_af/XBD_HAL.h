@@ -8,11 +8,17 @@
 
 
 #ifdef XBX_LITTLE_ENDIAN
-
+#ifdef __GNUC__
+    #define NTOHL(x) __builtin_bswap32(x)
+    #define NTOHS(x) __builtin_bswap16(x)
+    #define HTONL(x) __builtin_bswap32(x)
+    #define HTONS(x) __builtin_bswap16(x)
+#else
 	#define NTOHL(x) ((x & 0xFF000000)>>24)+((x & 0x00FF0000)>>8)+((x & 0x0000FF00)<<8)+((x & 0x000000FF)<<24)
 	#define HTONL(x) ((x & 0xFF000000)>>24)+((x & 0x00FF0000)>>8)+((x & 0x0000FF00)<<8)+((x & 0x000000FF)<<24)
 	#define NTOHS(x) (((x & 0xFF00)>>8)+((x & 0x00FF)<<8))
 	#define HTONS(x) (((x & 0xFF00)>>8)+((x & 0x00FF)<<8))
+#endif
 #else
 	#define NTOHL(x) (x)
 	#define HTONL(x) (x) 
@@ -63,7 +69,7 @@ void XBD_delayCycles(uint32_t approxCycles);
 /** Outputs a single char to the debug interface of the device 
 * @param message The char to output
 */
-void XBD_debugOut( char * message );
+void XBD_debugOut(const char * message );
 
 /** Reads a block of application code to the buffer 
 * @param pageStartAddress The start address of the page in byte

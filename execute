@@ -2,9 +2,10 @@
 
 . lib/settingsreader || exit -1
 
+PROTOVER="04"
 if [ -z $1 ]
 then
-  echo "$0 XBH-IP [XBH-Port]"
+  echo "$0 XBH-Address [XBH-Port]"
   exit -1
 fi
 
@@ -44,7 +45,7 @@ fi
 
 
 status=`$xbhCall -r` 
-if [ "$status" != "XBD03BLo" ] && [ "$status" != "XBD03AFo" ]
+if [ "$status" != "XBD${PROTOVER}BLo" ] && [ "$status" != "XBD${PROTOVER}AFo" ]
 then
   echo "Status request failed. XBD communication troubles?."
   echo "Exiting.";
@@ -132,7 +133,7 @@ do
     [ -d "$opPath/$p" ] || continue
       doDriftMeasurement
       expectedchecksum=''
-      [ -f "$algobase/$o/$p/checksum_128b" ] && expectedchecksum=`cat "$algobase/$o/$p/checksum_128b" | tr A-Z a-z`
+      [ -f "$algobase/$o/$p/checksumsmall" ] && expectedchecksum=`cat "$algobase/$o/$p/checksumsmall" | tr A-Z a-z`
       op="${o}_${p}"
                      
       echo "=== `date` === $abi $o/$p"
@@ -194,7 +195,7 @@ do
         lastBinary=$binary
         
         # test checksum
-        outputfile=`tempfile`
+        outputfile=`mktemp`
         doTimeStamp
         $xbhCall -c -e > "$outputfile"
         returnCode=`head -n 1 "$outputfile"`

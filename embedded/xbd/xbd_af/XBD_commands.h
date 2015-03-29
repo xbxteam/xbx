@@ -10,10 +10,10 @@
 
 #include <XBD_HAL.h>
 
-#define XBD_PROTO_VERSION "03"
+#define XBD_PROTO_VERSION "04"
 
 
-#define REVNSIZE 5
+#define REVNSIZE 7
 #define TIMESIZE 4
 #define ADDRSIZE 4
 #define SEQNSIZE 4
